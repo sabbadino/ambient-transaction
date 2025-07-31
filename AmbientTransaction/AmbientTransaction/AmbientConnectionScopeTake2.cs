@@ -46,6 +46,11 @@
         public static AmbientConnectionScopeTake2 Create(string connString)
         {
             var existing = GetAmbientScope(false);
+            if (existing?._connString != connString)
+            {
+                // TODO handle this better. Maybe keep info in a dictionary by connection string  
+                throw new ArgumentException("The connection string does not match the one of the existing ambient scope.");    
+            }
             var option = AmbientScopeOption.JoinExisting;
 
             var ownsContext = !(option == AmbientScopeOption.JoinExisting && existing != null);
