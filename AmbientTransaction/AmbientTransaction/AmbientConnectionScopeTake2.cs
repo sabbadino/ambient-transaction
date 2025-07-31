@@ -86,8 +86,6 @@
 
         public void Complete()
         {
-            var x = this.GetHashCode();
-            Console.WriteLine(x);
             _vote = true;
         }
 
@@ -123,16 +121,16 @@
                 }
                 catch (Exception ex)
                 {
-                    Transaction?.Rollback();
-                    _connection.Dispose();
+                    await Transaction.RollbackAsync();
+                    await _connection.DisposeAsync();
                     throw;
                 }   
                 if (_vote)
-                    Transaction.Commit();
+                    await Transaction.DisposeAsync();
                 else
-                    Transaction.Rollback();
+                    await Transaction.DisposeAsync();
 
-                _connection.Dispose();
+                await _connection.DisposeAsync();
             }
         }
     }
