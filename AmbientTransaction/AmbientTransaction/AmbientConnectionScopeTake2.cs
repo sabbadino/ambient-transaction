@@ -46,7 +46,7 @@
         public static AmbientConnectionScopeTake2 Create(string connString)
         {
             var existing = GetAmbientScope(false);
-            if (existing?._connString != connString)
+            if (existing!= null && existing?._connString != connString)
             {
                 // TODO handle this better. Maybe keep info in a dictionary by connection string  
                 throw new ArgumentException("The connection string does not match the one of the existing ambient scope.");    
@@ -126,11 +126,16 @@
                     throw;
                 }   
                 if (_vote)
-                    await Transaction.DisposeAsync();
+                    await Transaction.CommitAsync();
                 else
-                    await Transaction.DisposeAsync();
+                    await Transaction.RollbackAsync();
 
+                await Transaction.DisposeAsync();
                 await _connection.DisposeAsync();
+
+                _connection = null;
+                Transaction = null;
+
             }
         }
     }
