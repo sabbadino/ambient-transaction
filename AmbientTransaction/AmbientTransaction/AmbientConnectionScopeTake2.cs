@@ -135,7 +135,6 @@
 
                 _connection = null;
                 Transaction = null;
-
             }
         }
     }
