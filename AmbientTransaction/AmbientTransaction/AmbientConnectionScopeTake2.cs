@@ -51,7 +51,7 @@
             var ownsContext = !(option == AmbientScopeOption.JoinExisting && existing != null);
 
             var scope = new AmbientConnectionScopeTake2(option, connString, ownsContext);
-
+            // keep track of child scopes
             existing?.ChildScopes.Add(scope);    
 
             if (!ownsContext && existing != null)
@@ -65,20 +65,16 @@
             return scope;
         }
 
-        //public static AmbientConnectionScopeTake2 SuppressScope(string connString)
-        //{
-        //    var scope = new AmbientConnectionScopeTake2(AmbientScopeOption.ForceCreateNew, connString, ownsContext: true);
+        // TO BE TESTED
+        public static AmbientConnectionScopeTake2 ForceCreateNew(string connString)
+        {
+            var option = AmbientScopeOption.ForceCreateNew;
 
-        //    var conn = new SqlConnection(connString);
-        //    await conn.OpenAsync().ConfigureAwait(false);
-        //    scope.Connection = conn;
-        //    scope.Transaction = conn.BeginTransaction();
-
-        //    scope.Activate();
-
-
-        //    return scope;
-        //}
+            var ownsContext = true;
+            var scope = new AmbientConnectionScopeTake2(option, connString, ownsContext);
+            scope.Activate();
+            return scope;
+        }
 
         public static AmbientConnectionScopeTake2 Current =>
             GetAmbientScope(false) ?? throw new InvalidOperationException("No ambient connection scope active.");
