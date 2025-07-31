@@ -15,19 +15,19 @@
         private DbConnection? _connection = null;
         private List<AmbientConnectionScopeTake2> ChildScopes = new List<AmbientConnectionScopeTake2>();
 
-        public DbConnection Connection { get {
+        public async Task<DbConnection> GetOpenConnectionOrCreate () { 
                 if (_connection == null)
                 {
                     _connection = new SqlConnection(_connString);
-                    _connection.Open();
-                    Transaction = _connection.BeginTransaction();
+                    await _connection.OpenAsync();
+                    Transaction = await _connection.BeginTransactionAsync();
                 }
                 return _connection;
-            } private set { _connection = value; }
-        }
+            } 
+        
 
-        public DbCommand CreateCommand (string text){ 
-            var cmd = Connection.CreateCommand();
+        public async Task<DbCommand> CreateCommandAsync (string text){ 
+            var cmd = (await GetOpenConnectionOrCreate()).CreateCommand();
             cmd.Transaction = Transaction;
             cmd.CommandText = text;
             return cmd;
@@ -56,7 +56,7 @@
 
             if (!ownsContext && existing != null)
             {
-                scope.Connection = existing.Connection;
+                scope._connection = existing._connection;
                 scope.Transaction = existing.Transaction;
             }
 
@@ -114,7 +114,7 @@
 
         protected override async ValueTask DisposeAsyncImplementation()
         {
-            if (_ownsContext && Connection != null && Transaction != null)
+            if (_ownsContext && _connection != null && Transaction != null)
             {
                 try
                 {
@@ -123,7 +123,7 @@
                 catch (Exception ex)
                 {
                     Transaction?.Rollback();
-                    Connection.Dispose();
+                    _connection.Dispose();
                     throw;
                 }   
                 if (_vote)
@@ -131,7 +131,7 @@
                 else
                     Transaction.Rollback();
 
-                Connection.Dispose();
+                _connection.Dispose();
             }
         }
     }
