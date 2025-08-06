@@ -1,5 +1,8 @@
 ﻿using AmbientTransaction;
+using Castle.DynamicProxy;
 using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Data.Common;
 using Xunit.Sdk;
 
 namespace AmbientTransactionTests
@@ -15,13 +18,13 @@ namespace AmbientTransactionTests
             var insert =  DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff") ;
             await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
             {
-                Assert.NotNull(await scope.GetOpenConnectionOrCreate());
+                Assert.NotNull(scope.Connection);
                 Assert.NotNull(scope.Transaction);
-                Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
+                Assert.Equal(System.Data.ConnectionState.Open, scope.Connection.State);
                 //var cmd = scope.Connection.CreateCommand();
                 //cmd.Transaction = scope.Transaction;
                 //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                var cmd = await scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')");   
+                var cmd = scope.CreateCommand($"insert into table_1 (id) values ('{insert}')");   
                 try
                 {
                     await cmd.ExecuteNonQueryAsync();
@@ -50,13 +53,10 @@ namespace AmbientTransactionTests
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
             {
-                Assert.NotNull(await scope.GetOpenConnectionOrCreate());
+                Assert.NotNull(scope.Connection);
                 Assert.NotNull(scope.Transaction);
-                Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
-                //var cmd = scope.Connection.CreateCommand();
-                //cmd.Transaction = scope.Transaction;
-                //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                var cmd = await scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
+                Assert.Equal(System.Data.ConnectionState.Open, scope.Connection.State);
+                var cmd = scope.CreateCommand($"insert into table_1 (id) values ('{insert}')"); 
                 try
                 {
                     await cmd.ExecuteNonQueryAsync();
@@ -86,13 +86,13 @@ namespace AmbientTransactionTests
             var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
             {
-                Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
+                Assert.NotNull(scope.Connection);
                 Assert.NotNull(scope.Transaction);
-                Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
+                Assert.Equal(System.Data.ConnectionState.Open, scope.Connection.State);
                 //var cmd = scope.Connection.CreateCommand();
                 //cmd.Transaction = scope.Transaction;
                 //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                var cmd = await  scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
+                var cmd = scope.CreateCommand($"insert into table_1 (id) values ('{insert}')"); 
                 try
                 {
                     await cmd.ExecuteNonQueryAsync();
@@ -135,13 +135,13 @@ namespace AmbientTransactionTests
             var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await using (var scope1 = AmbientConnectionScopeTake2.Create(cnString))
             {
-                Assert.NotNull((await scope1.GetOpenConnectionOrCreate()));
+                Assert.NotNull(scope1.Connection);
                 Assert.NotNull(scope1.Transaction);
-                Assert.Equal(System.Data.ConnectionState.Open, (await scope1.GetOpenConnectionOrCreate()).State);
+                Assert.Equal(System.Data.ConnectionState.Open, scope1.Connection.State);
                 //var cmd = scope1.Connection.CreateCommand();
                 //cmd.Transaction = scope1.Transaction;
                 //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                var cmd =await  scope1.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')");
+                var cmd =  scope1.CreateCommand($"insert into table_1 (id) values ('{insert}')");
                 await cmd.ExecuteNonQueryAsync();
 
                 // NESTED
@@ -149,7 +149,7 @@ namespace AmbientTransactionTests
                 {
                     //var cmd2 = scope2.Connection.CreateCommand();
                     //cmd2.Transaction = scope1.Transaction;
-                    var cmd2 = await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");
+                    var cmd2 =  scope2.CreateCommand($"insert into table_2 (id) values ('{insert2}')");
                     await cmd2.ExecuteNonQueryAsync();
                     scope2.Complete();
                 }
@@ -179,13 +179,13 @@ namespace AmbientTransactionTests
             {
                 await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
                 {
-                    Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
+                    Assert.NotNull(scope.Connection);
                     Assert.NotNull(scope.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
+                    Assert.Equal(System.Data.ConnectionState.Open, scope.Connection.State);
                     //var cmd = scope.Connection.CreateCommand();
                     //cmd.Transaction = scope.Transaction;
                     //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd = await scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
+                    var cmd =  scope.CreateCommand($"insert into table_1 (id) values ('{insert}')"); 
                     await cmd.ExecuteNonQueryAsync();
                     // NESTED
                     await using (var scope2 = AmbientConnectionScopeTake2.Create(cnString))
@@ -193,7 +193,7 @@ namespace AmbientTransactionTests
                         //var cmd2 = scope2.Connection.CreateCommand();
                         //cmd2.Transaction = scope.Transaction;
                         //cmd2.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                        var cmd2 = await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");
+                        var cmd2 =  scope2.CreateCommand($"insert into table_2 (id) values ('{insert2}')");
                         await cmd2.ExecuteNonQueryAsync();
                         // NESTED 2 // do not call complete
                     }
@@ -230,13 +230,13 @@ namespace AmbientTransactionTests
             {
                 await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
                 {
-                    Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
+                    Assert.NotNull(scope.Connection);
                     Assert.NotNull(scope.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open   , (await scope.GetOpenConnectionOrCreate()).State);
+                    Assert.Equal(System.Data.ConnectionState.Open, scope.Connection.State);
                     //var cmd = scope.Connection.CreateCommand();
                     //cmd.Transaction = scope.Transaction;
                     //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd = await scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
+                    var cmd =  scope.CreateCommand($"insert into table_1 (id) values ('{insert}')"); 
                     await cmd.ExecuteNonQueryAsync();
 
                    
@@ -247,7 +247,7 @@ namespace AmbientTransactionTests
                         //var cmd2 = scope2.Connection.CreateCommand();
                         //cmd2.Transaction = scope.Transaction;
                         //cmd2.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                        var cmd2 = await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");  
+                        var cmd2 =  scope2.CreateCommand($"insert into table_2 (id) values ('{insert2}')");  
                         try
                         {
                             await cmd2.ExecuteNonQueryAsync();
@@ -257,7 +257,7 @@ namespace AmbientTransactionTests
                                 //var cmd3 = scope3.Connection.CreateCommand();
                                 //cmd3.Transaction = scope.Transaction;
                                 //cmd3.CommandText = $"insert into table_2 (id) values ('{insert3}')";
-                                var cmd3 = await scope3.CreateCommandAsync($"insert into table_2 (id) values ('{insert3}')");  
+                                var cmd3 =  scope3.CreateCommand($"insert into table_2 (id) values ('{insert3}')");  
                                 await cmd3.ExecuteNonQueryAsync();
                                 //scope.Complete(); forget to vote 
                             }
@@ -304,13 +304,13 @@ namespace AmbientTransactionTests
             {
                 await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
                 {
-                    Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
+                    Assert.NotNull(scope.Connection);
                     Assert.NotNull(scope.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
+                    Assert.Equal(System.Data.ConnectionState.Open, scope.Connection.State);
                     //var cmd = scope.Connection.CreateCommand();
                     //cmd.Transaction = scope.Transaction;
                     //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd =  await  scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
+                    var cmd =    scope.CreateCommand($"insert into table_1 (id) values ('{insert}')"); 
                     await cmd.ExecuteNonQueryAsync();
 
 
@@ -321,7 +321,7 @@ namespace AmbientTransactionTests
                         //var cmd2 = scope2.Connection.CreateCommand();
                         //cmd2.Transaction = scope.Transaction;
                         //cmd2.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                        var cmd2= await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");   
+                        var cmd2=  scope2.CreateCommand($"insert into table_2 (id) values ('{insert2}')");   
                         try
                         {
                             await cmd2.ExecuteNonQueryAsync();
@@ -332,7 +332,7 @@ namespace AmbientTransactionTests
                                 //cmd3.Transaction = scope.Transaction;
                                 //// generate violation of PK 
                                 //cmd3.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                                var cmd3 = await scope3.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");  
+                                var cmd3 =  scope3.CreateCommand($"insert into table_2 (id) values ('{insert2}')");  
                                 await cmd3.ExecuteNonQueryAsync();
 
 
@@ -379,13 +379,13 @@ namespace AmbientTransactionTests
             {
                 await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
                 {
-                    Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
+                    Assert.NotNull(scope.Connection);
                     Assert.NotNull(scope.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
+                    Assert.Equal(System.Data.ConnectionState.Open, scope.Connection.State);
                     //var cmd = scope.Connection.CreateCommand();
                     //cmd.Transaction = scope.Transaction;
                     //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd =await  scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
+                    var cmd =  scope.CreateCommand($"insert into table_1 (id) values ('{insert}')"); 
                     try
                     {
                         await cmd.ExecuteNonQueryAsync();
@@ -402,7 +402,7 @@ namespace AmbientTransactionTests
                         //var cmd2 = scope2.Connection.CreateCommand();
                         //cmd2.Transaction = scope.Transaction;
                         //cmd2.CommandText = $"insert into table_2 (id) values ('{insert}')";
-                        var cmd2 =await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert}')");   
+                        var cmd2 = scope2.CreateCommand($"insert into table_2 (id) values ('{insert}')");   
                         await cmd2.ExecuteNonQueryAsync();
                             // generate violation of PK 
                             await cmd2.ExecuteNonQueryAsync();
@@ -413,7 +413,7 @@ namespace AmbientTransactionTests
                                 //cmd3.Transaction = scope.Transaction;
                                 //// generate violation of PK 
                                 //cmd3.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                            var cmd3 = await scope3.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");
+                            var cmd3 =  scope3.CreateCommand($"insert into table_2 (id) values ('{insert2}')");
                             try
                                 {
                                     await cmd3.ExecuteNonQueryAsync();
@@ -447,6 +447,7 @@ namespace AmbientTransactionTests
             }
 
         }
+     
 
         [Fact]
         public async Task TestAsyncAmbientConnectionScopeTake2TwoCommands3ScopeRootFails()
@@ -460,13 +461,13 @@ namespace AmbientTransactionTests
             {
                 await using (var scope1 = AmbientConnectionScopeTake2.Create(cnString))
                 {
-                    Assert.NotNull((await scope1.GetOpenConnectionOrCreate()));
+                    Assert.NotNull(scope1.Connection);
                     Assert.NotNull(scope1.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open, (await scope1.GetOpenConnectionOrCreate()).State);
+                    Assert.Equal(System.Data.ConnectionState.Open, scope1.Connection.State);
                     //var cmd = scope1.Connection.CreateCommand();
                     //cmd.Transaction = scope1.Transaction;
                     //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd =   await scope1.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')");    
+                    var cmd =    scope1.CreateCommand($"insert into table_1 (id) values ('{insert}')");    
                     try
                     {
                         await cmd.ExecuteNonQueryAsync();
@@ -483,7 +484,7 @@ namespace AmbientTransactionTests
                         //var cmd2 = scope1.Connection.CreateCommand();
                         //cmd2.CommandText = $"insert into table_2 (id) values ('{insert}')";
                         //cmd2.Transaction = scope1.Transaction;
-                        var cmd2 =await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert}')");   
+                        var cmd2 = scope2.CreateCommand($"insert into table_2 (id) values ('{insert}')");   
                         await cmd2.ExecuteNonQueryAsync();
                         // NESTED 3 // do not call complete
                         await using (var scope3 = AmbientConnectionScopeTake2.Create(cnString))
@@ -492,7 +493,7 @@ namespace AmbientTransactionTests
                             //cmd3.Transaction = scope1.Transaction;
                             //// generate violation of PK 
                             //cmd3.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                            var cmd3 =await scope3.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");  
+                            var cmd3 = scope3.CreateCommand($"insert into table_2 (id) values ('{insert2}')");  
                             await cmd3.ExecuteNonQueryAsync();
                             scope3.Complete();
                         }

@@ -1,43 +1,51 @@
 ﻿namespace AmbientTransaction
 {
+    using Architect.AmbientContexts;
+    using Microsoft.Data.SqlClient;
     using System;
     using System.Data.Common;
     using System.Threading.Tasks;
-    using Architect.AmbientContexts;
-    using Microsoft.Data.SqlClient;
-
     public sealed class AmbientConnectionScopeTake2 : AsyncAmbientScope<AmbientConnectionScopeTake2>
     {
         private readonly string _connString;
         private readonly bool _ownsContext;
         private bool _vote;
 
-        private DbConnection? _connection = null;
+        private DbConnection? _actualConnection
+            = null;
+
+        private DbTransaction? _actualTransaction;
+        private DbTransaction? _TransactionWrapper;
+        private DbConnectionWrapper _connectionWrapper;
         private List<AmbientConnectionScopeTake2> ChildScopes = new List<AmbientConnectionScopeTake2>();
 
-        public async Task<DbConnection> GetOpenConnectionOrCreate () { 
-                if (_connection == null)
-                {
-                    _connection = new SqlConnection(_connString);
-                    await _connection.OpenAsync();
-                    Transaction = await _connection.BeginTransactionAsync();
-                }
-                return _connection;
-            } 
+        private void Setup()
+        {
+                _actualConnection = new SqlConnection(_connString);
+                _connectionWrapper = new DbConnectionWrapper(_actualConnection);
+                _actualConnection.Open();
+                _actualTransaction = _actualConnection.BeginTransaction();
+                _TransactionWrapper = new DbTransactionWrapper(_actualTransaction);
+        } 
         
 
-        public async Task<DbCommand> CreateCommandAsync (string text){ 
-            var cmd = (await GetOpenConnectionOrCreate()).CreateCommand();
+        public DbCommand CreateCommand (string text){ 
+            var cmd = _connectionWrapper.CreateCommand();
             cmd.Transaction = Transaction;
             cmd.CommandText = text;
             return cmd;
         }
 
-        public DbTransaction? Transaction { get; private set; }
+        
+
+        public DbTransaction? Transaction { get { return _TransactionWrapper; } }
+
+        public DbConnection? Connection { get { return _connectionWrapper; } }
 
         private AmbientConnectionScopeTake2(AmbientScopeOption option, string connString, bool ownsContext)
             : base(option)
         {
+            ArgumentNullException.ThrowIfNull(connString);
             _ownsContext = ownsContext;
             _connString = connString;
             _vote = false;
@@ -45,24 +53,27 @@
 
         public static AmbientConnectionScopeTake2 Create(string connString)
         {
+            ArgumentNullException.ThrowIfNull(connString);
             var existing = GetAmbientScope(false);
-            if (existing!= null && existing?._connString != connString)
+            if (existing!= null && existing._connString != connString)
             {
                 // TODO handle this better. Maybe keep info in a dictionary by connection string  
                 throw new ArgumentException("The connection string does not match the one of the existing ambient scope.");    
             }
             var option = AmbientScopeOption.JoinExisting;
 
-            var ownsContext = !(option == AmbientScopeOption.JoinExisting && existing != null);
-
-            var scope = new AmbientConnectionScopeTake2(option, connString, ownsContext);
+            var scope = new AmbientConnectionScopeTake2(option, connString, existing==null);
             // keep track of child scopes
-            existing?.ChildScopes.Add(scope);    
-
-            if (!ownsContext && existing != null)
+            if (existing != null)
             {
-                scope._connection = existing._connection;
-                scope.Transaction = existing.Transaction;
+                existing.ChildScopes.Add(scope);
+                scope._actualConnection = existing._actualConnection;
+                scope._connectionWrapper= existing._connectionWrapper;
+                scope._actualTransaction= existing._actualTransaction;
+                scope._TransactionWrapper = existing._TransactionWrapper;
+            }
+            else {
+                scope.Setup();
             }
 
             scope.Activate();
@@ -113,7 +124,7 @@
 
         protected override async ValueTask DisposeAsyncImplementation()
         {
-            if (_ownsContext && _connection != null && Transaction != null)
+            if (_ownsContext && _actualConnection != null && _actualTransaction != null)
             {
                 try
                 {
@@ -121,20 +132,20 @@
                 }
                 catch (Exception ex)
                 {
-                    await Transaction.RollbackAsync();
-                    await _connection.DisposeAsync();
+                    await _actualTransaction.RollbackAsync();
+                    await _actualConnection.DisposeAsync();
                     throw;
                 }   
                 if (_vote)
-                    await Transaction.CommitAsync();
+                    await _actualTransaction.CommitAsync();
                 else
-                    await Transaction.RollbackAsync();
+                    await _actualTransaction.RollbackAsync();
 
-                await Transaction.DisposeAsync();
-                await _connection.DisposeAsync();
+                await _actualTransaction.DisposeAsync();
+                await _actualConnection.DisposeAsync();
 
-                _connection = null;
-                Transaction = null;
+                _actualConnection = null;
+                _actualTransaction = null;
             }
         }
     }
