@@ -139,7 +139,6 @@ public override string Database => _innerConnection.Database;
         public override void Close()
         {
             return;
-            //_innerConnection.Close();
         }
     }
 
