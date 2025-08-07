@@ -34,6 +34,8 @@ namespace AmbientTransactionTests
 
         }
 
+
+
         [Fact]
         public async Task TestAsyncNoAmbientConnectionScopeTake2WithRepositoryCommitWantTransaction()
         {
@@ -96,6 +98,26 @@ namespace AmbientTransactionTests
                 }
                 scope.Complete();
             }
+            using var cn = new SqlConnection(cnString);
+            await cn.OpenAsync();
+            var cmd2 = cn.CreateCommand();
+            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
+            var value = await cmd2.ExecuteScalarAsync();
+            Assert.True(value as string == insert);
+
+        }
+
+        [Fact]
+        public async Task TestAsyncNoAmbientConnectionScopeTake()
+        {
+            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
+            var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+          
+                    var r = new Repository1(new DbConnectionFactory(cnString));
+                    await r.do1(insert);
+                   
+          
             using var cn = new SqlConnection(cnString);
             await cn.OpenAsync();
             var cmd2 = cn.CreateCommand();

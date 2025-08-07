@@ -19,8 +19,18 @@ namespace AmbientTransaction
 
         public DbConnection GetConnection (out DbTransaction? dbTransaction) {
 
+            // unfortunately we cannot avoid to pass the actual dbtransaction here , since it has to be associated with the command
             dbTransaction = AmbientConnectionScopeTake2.Current?._actualTransaction;
-            return AmbientConnectionScopeTake2.Current?._connectionWrapper ?? (new SqlConnection(ConnectionString)) as DbConnection;   
+            if(AmbientConnectionScopeTake2.Current!=null)
+            {
+                return AmbientConnectionScopeTake2.Current._connectionWrapper;
+            }
+            else
+            {
+                var cn = new SqlConnection(ConnectionString) ;
+                cn.Open();
+                return cn;
+            }
             } 
         string ConnectionString { get; }
 

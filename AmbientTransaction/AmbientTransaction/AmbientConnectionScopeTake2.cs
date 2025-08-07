@@ -90,8 +90,8 @@
             return scope;
         }
 
-        public static AmbientConnectionScopeTake2 Current =>
-            GetAmbientScope(false) ?? throw new InvalidOperationException("No ambient connection scope active.");
+        public static AmbientConnectionScopeTake2? Current =>
+            GetAmbientScope(false) ;
 
         public void Complete()
         {
