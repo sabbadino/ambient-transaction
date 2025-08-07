@@ -28,7 +28,7 @@ namespace AmbientTransaction
             else
             {
                 var cn = new SqlConnection(ConnectionString) ;
-                cn.OpenAsync();
+                cn.Open();
                 return cn;
             }
             } 
