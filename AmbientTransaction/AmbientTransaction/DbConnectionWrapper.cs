@@ -45,7 +45,7 @@
 
         public override void EnlistTransaction(System.Transactions.Transaction? transaction)
         {
-            _innerConnection.EnlistTransaction(transaction);
+            throw new InvalidOperationException("Do not try to EnlistTransaction a transaction explicitly. Use AmbientConnectionScope");
         }
         public override bool Equals(object? obj)
         {
