@@ -11,12 +11,11 @@
         private readonly bool _ownsContext;
         private bool _vote;
 
-        private DbConnection? _actualConnection
+        internal DbConnection? _actualConnection
             = null;
 
-        private DbTransaction? _actualTransaction;
-        private DbTransaction? _TransactionWrapper;
-        private DbConnectionWrapper _connectionWrapper;
+        internal DbTransaction? _actualTransaction;
+        internal DbConnectionWrapper _connectionWrapper;
         private List<AmbientConnectionScopeTake2> ChildScopes = new List<AmbientConnectionScopeTake2>();
 
         private void Setup()
@@ -25,22 +24,22 @@
                 _connectionWrapper = new DbConnectionWrapper(_actualConnection);
                 _actualConnection.Open();
                 _actualTransaction = _actualConnection.BeginTransaction();
-                _TransactionWrapper = new DbTransactionWrapper(_actualTransaction);
+
         } 
         
 
         public DbCommand CreateCommand (string text){ 
             var cmd = _connectionWrapper.CreateCommand();
-            cmd.Transaction = Transaction;
+            cmd.Transaction = _actualTransaction;
             cmd.CommandText = text;
             return cmd;
         }
 
         
 
-        public DbTransaction? Transaction { get { return _TransactionWrapper; } }
+       // public DbTransaction? Transaction { get { return _TransactionWrapper; } }
 
-        public DbConnection? Connection { get { return _connectionWrapper; } }
+     //   public DbConnection? Connection { get { return _connectionWrapper; } }
 
         private AmbientConnectionScopeTake2(AmbientScopeOption option, string connString, bool ownsContext)
             : base(option)
@@ -70,7 +69,6 @@
                 scope._actualConnection = existing._actualConnection;
                 scope._connectionWrapper= existing._connectionWrapper;
                 scope._actualTransaction= existing._actualTransaction;
-                scope._TransactionWrapper = existing._TransactionWrapper;
             }
             else {
                 scope.Setup();

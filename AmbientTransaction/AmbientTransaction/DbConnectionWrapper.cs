@@ -5,9 +5,7 @@
     using System.Data.Common;
     using System.Threading.Tasks;
 
-   
-
-    public class DbConnectionWrapper : DbConnection
+        public class DbConnectionWrapper : DbConnection
     {
         internal readonly DbConnection _innerConnection;
         public DbConnectionWrapper(DbConnection innerConnection)
@@ -35,14 +33,16 @@
         }
         public override Task CloseAsync()
         {
-            return _innerConnection.CloseAsync();
+            return Task.CompletedTask;  
+            //IGNORE return _innerConnection.CloseAsync();
         }
 
         public override int ConnectionTimeout => _innerConnection.ConnectionTimeout;
 
         public override ValueTask DisposeAsync()
         {
-            return _innerConnection.DisposeAsync();
+            return ValueTask.CompletedTask;
+           // return _innerConnection.DisposeAsync();
         }
 
         public override void EnlistTransaction(System.Transactions.Transaction? transaction)
@@ -119,11 +119,23 @@ public override string Database => _innerConnection.Database;
         public override string DataSource => _innerConnection.DataSource;
         public override string ServerVersion => _innerConnection.ServerVersion;
         public override ConnectionState State => _innerConnection.State;
-        protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => _innerConnection.BeginTransaction(isolationLevel);
+        protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
+        {
+            return new FakeDbTransaction(this);
+        }
         protected override DbCommand CreateDbCommand() => _innerConnection.CreateCommand();
-        public override void Open() => _innerConnection.Open();
-        public override Task OpenAsync(CancellationToken cancellationToken) => _innerConnection.OpenAsync(cancellationToken);
-        protected override void Dispose(bool disposing) => _innerConnection.Dispose();
+        public override void Open() { return; // _innerConnection.Open();//
+        }
+        public override Task OpenAsync(CancellationToken cancellationToken)
+        {
+            return Task.CompletedTask;
+            //_innerConnection.OpenAsync(cancellationToken);
+        }
+        protected override void Dispose(bool disposing)
+        {
+            return;
+            _innerConnection.Dispose();
+        }
 
       
 
@@ -134,7 +146,8 @@ public override string Database => _innerConnection.Database;
 
         public override void Close()
         {
-            _innerConnection.Close();
+            return;
+            //_innerConnection.Close();
         }
     }
 
