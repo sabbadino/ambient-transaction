@@ -12,9 +12,9 @@ namespace AmbientTransactionTests
             _dbConnectionFactory = dbConnectionFactory;
         }
 
-        public async Task do1(string id)
+        public async Task DoSingleWork(string id)
         {
-            await using (var cn = _dbConnectionFactory.GetConnection(out var dbTransaction))
+            await using (var cn = _dbConnectionFactory.GetOpenConnection(out var dbTransaction))
             {
                 var cmd = cn.CreateCommand();
                 cmd.Transaction = dbTransaction;
@@ -24,12 +24,12 @@ namespace AmbientTransactionTests
 
         }
 
-        public async Task RepoMethodWithTransaction(string id, string id2)
+        public async Task DoMultipleWorkInTransaction(string id, string id2)
         {
-            await using (var scope = AmbientConnectionScopeTake2.Create(_dbConnectionFactory.ConnectionString))
+            await using (var scope = AmbientConnectionScope.Create(_dbConnectionFactory.ConnectionString))
             {
 
-                await using (var cn = _dbConnectionFactory.GetConnection(out var dbTransaction))
+                await using (var cn = _dbConnectionFactory.GetOpenConnection(out var dbTransaction))
                 {
                     var cmd = cn.CreateCommand();
                     cmd.Transaction = dbTransaction;

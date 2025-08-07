@@ -5,7 +5,7 @@
     using System;
     using System.Data.Common;
     using System.Threading.Tasks;
-    public sealed class AmbientConnectionScopeTake2 : AsyncAmbientScope<AmbientConnectionScopeTake2>
+    public sealed class AmbientConnectionScope : AsyncAmbientScope<AmbientConnectionScope>
     {
         private readonly string _connString;
         private readonly bool _ownsContext;
@@ -16,7 +16,7 @@
 
         internal DbTransaction? _actualTransaction;
         internal DbConnectionWrapper _connectionWrapper;
-        private List<AmbientConnectionScopeTake2> ChildScopes = new List<AmbientConnectionScopeTake2>();
+        private List<AmbientConnectionScope> ChildScopes = new List<AmbientConnectionScope>();
 
         private void Setup()
         {
@@ -41,7 +41,7 @@
 
      //   public DbConnection? Connection { get { return _connectionWrapper; } }
 
-        private AmbientConnectionScopeTake2(AmbientScopeOption option, string connString, bool ownsContext)
+        private AmbientConnectionScope(AmbientScopeOption option, string connString, bool ownsContext)
             : base(option)
         {
             ArgumentNullException.ThrowIfNull(connString);
@@ -50,7 +50,7 @@
             _vote = false;
         }
 
-        public static AmbientConnectionScopeTake2 Create(string connString)
+        public static AmbientConnectionScope Create(string connString)
         {
             ArgumentNullException.ThrowIfNull(connString);
             var existing = GetAmbientScope(false);
@@ -61,7 +61,7 @@
             }
             var option = AmbientScopeOption.JoinExisting;
 
-            var scope = new AmbientConnectionScopeTake2(option, connString, existing==null);
+            var scope = new AmbientConnectionScope(option, connString, existing==null);
             // keep track of child scopes
             if (existing != null)
             {
@@ -80,17 +80,17 @@
         }
 
         // TO BE TESTED
-        public static AmbientConnectionScopeTake2 ForceCreateNew(string connString)
+        public static AmbientConnectionScope ForceCreateNew(string connString)
         {
             var option = AmbientScopeOption.ForceCreateNew;
 
             var ownsContext = true;
-            var scope = new AmbientConnectionScopeTake2(option, connString, ownsContext);
+            var scope = new AmbientConnectionScope(option, connString, ownsContext);
             scope.Activate();
             return scope;
         }
 
-        public static AmbientConnectionScopeTake2? Current =>
+        public static AmbientConnectionScope? Current =>
             GetAmbientScope(false) ;
 
         public void Complete()
@@ -104,7 +104,7 @@
             x.AsTask().Wait();
         }
 
-        private void CheckChildScopes(AmbientConnectionScopeTake2 scope)
+        private void CheckChildScopes(AmbientConnectionScope scope)
         {
             foreach (var childScope in scope.ChildScopes)
             {

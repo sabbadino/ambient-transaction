@@ -90,10 +90,7 @@
             return _innerConnection.GetSchemaAsync(collectionName, restrictionValues, cancellationToken);
         }
 
-        //public override object InitializeLifetimeService()
-        //{
-        //    return _innerConnection.InitializeLifetimeService();
-        //}
+      
 
         public override ISite? Site { get => _innerConnection.Site; set => _innerConnection.Site = value; }
         public override event StateChangeEventHandler? StateChange
@@ -121,7 +118,7 @@ public override string Database => _innerConnection.Database;
         public override ConnectionState State => _innerConnection.State;
         protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
         {
-            return new FakeDbTransaction(this);
+            throw new InvalidOperationException("Do not try to start a transaction explicitly. Use AmbientConnectionScope"); 
         }
         protected override DbCommand CreateDbCommand() => _innerConnection.CreateCommand();
         public override void Open() { return; // _innerConnection.Open();//
@@ -129,12 +126,10 @@ public override string Database => _innerConnection.Database;
         public override Task OpenAsync(CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
-            //_innerConnection.OpenAsync(cancellationToken);
         }
         protected override void Dispose(bool disposing)
         {
             return;
-            _innerConnection.Dispose();
         }
 
       
