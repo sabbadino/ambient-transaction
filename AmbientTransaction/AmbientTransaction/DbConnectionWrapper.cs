@@ -34,7 +34,6 @@
         public override Task CloseAsync()
         {
             return Task.CompletedTask;  
-            //IGNORE return _innerConnection.CloseAsync();
         }
 
         public override int ConnectionTimeout => _innerConnection.ConnectionTimeout;
@@ -42,7 +41,6 @@
         public override ValueTask DisposeAsync()
         {
             return ValueTask.CompletedTask;
-           // return _innerConnection.DisposeAsync();
         }
 
         public override void EnlistTransaction(System.Transactions.Transaction? transaction)
@@ -121,8 +119,7 @@ public override string Database => _innerConnection.Database;
             throw new InvalidOperationException("Do not try to start a transaction explicitly. Use AmbientConnectionScope"); 
         }
         protected override DbCommand CreateDbCommand() => _innerConnection.CreateCommand();
-        public override void Open() { return; // _innerConnection.Open();//
-        }
+        public override void Open() { return; }
         public override Task OpenAsync(CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
