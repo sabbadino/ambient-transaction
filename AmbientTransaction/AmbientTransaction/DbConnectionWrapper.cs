@@ -22,7 +22,7 @@
         public override string ConnectionString
         {
             get => _innerConnection.ConnectionString;
-            set => _innerConnection.ConnectionString = value;
+            set { throw new NotSupportedException(); }
         }
 
         public override bool CanCreateBatch => _innerConnection.CanCreateBatch;
