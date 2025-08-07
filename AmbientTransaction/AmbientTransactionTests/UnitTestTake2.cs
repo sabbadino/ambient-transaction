@@ -1,117 +1,28 @@
 ﻿using AmbientTransaction;
+using Castle.DynamicProxy;
 using Microsoft.Data.SqlClient;
+using System.Data;
+using System.Data.Common;
 using Xunit.Sdk;
 
 namespace AmbientTransactionTests
 {
-    public class UnitTest1Take2
+
+        public class UnitTest1Take2
     {
-        
-        [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2SingleCommandSingleScope()
-        {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
-            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
-            var insert =  DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff") ;
-            await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
-            {
-                Assert.NotNull(await scope.GetOpenConnectionOrCreate());
-                Assert.NotNull(scope.Transaction);
-                Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
-                //var cmd = scope.Connection.CreateCommand();
-                //cmd.Transaction = scope.Transaction;
-                //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                var cmd = await scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')");   
-                try
-                {
-                    await cmd.ExecuteNonQueryAsync();
 
-                }
-                catch (Exception ex)
-                {
-                    throw;
-                }
-                scope.Complete();
-            }
-            using var cn = new SqlConnection(cnString);
-            await cn.OpenAsync();
-            var cmd2 = cn.CreateCommand();
-            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";   
-            var value = await cmd2.ExecuteScalarAsync();    
-            Assert.True(value as string == insert);   
-
-        }
 
         [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2SingleCommandSingleScopeNoComplete()
+        public async Task TestAmbientConnectionScopeDoMultipleWorkInTransactionCommit()
         {
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
+            var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+            await using (var scope = AmbientConnectionScope.Create(cnString))
             {
-                Assert.NotNull(await scope.GetOpenConnectionOrCreate());
-                Assert.NotNull(scope.Transaction);
-                Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
-                //var cmd = scope.Connection.CreateCommand();
-                //cmd.Transaction = scope.Transaction;
-                //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                var cmd = await scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
-                try
-                {
-                    await cmd.ExecuteNonQueryAsync();
-
-                }
-                catch (Exception ex)
-                {
-                    throw;
-                }
-               
-            }
-            using var cn = new SqlConnection(cnString);
-            await cn.OpenAsync();
-            var cmd2 = cn.CreateCommand();
-            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
-            var value = await cmd2.ExecuteScalarAsync();
-            Assert.True(value as string == null);
-
-        }
-
-        [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2TwoCommandsSingleScope()
-        {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
-            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
-            var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
-            {
-                Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
-                Assert.NotNull(scope.Transaction);
-                Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
-                //var cmd = scope.Connection.CreateCommand();
-                //cmd.Transaction = scope.Transaction;
-                //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                var cmd = await  scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
-                try
-                {
-                    await cmd.ExecuteNonQueryAsync();
-
-                }
-                catch (Exception ex)
-                {
-                    throw;
-                }
-                cmd.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                try
-                {
-                    await cmd.ExecuteNonQueryAsync();
-
-                }
-                catch (Exception ex)
-                {
-                    throw;
-                }
+                var r = new Repository1(new DbConnectionFactory(cnString));
+                await r.DoMultipleWorkInTransaction(insert,insert2);
                 scope.Complete();
             }
             using var cn = new SqlConnection(cnString);
@@ -120,405 +31,153 @@ namespace AmbientTransactionTests
             cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
             var value = await cmd2.ExecuteScalarAsync();
             Assert.True(value as string == insert);
-            cmd2.CommandText = $"select id from table_2 where id = '{insert2}'";
+            cmd2.CommandText = $"select id from table_1 where id = '{insert2}'";
             value = await cmd2.ExecuteScalarAsync();
             Assert.True(value as string == insert2);
 
         }
 
         [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2TwoCommandsTwoScope()
+        public async Task TestAmbientConnectionScopeDoMultipleWorkInTransactionRollBack()
         {
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope1 = AmbientConnectionScopeTake2.Create(cnString))
+            var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+            await using (var scope = AmbientConnectionScope.Create(cnString))
             {
-                Assert.NotNull((await scope1.GetOpenConnectionOrCreate()));
-                Assert.NotNull(scope1.Transaction);
-                Assert.Equal(System.Data.ConnectionState.Open, (await scope1.GetOpenConnectionOrCreate()).State);
-                //var cmd = scope1.Connection.CreateCommand();
-                //cmd.Transaction = scope1.Transaction;
-                //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                var cmd =await  scope1.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')");
-                await cmd.ExecuteNonQueryAsync();
-
-                // NESTED
-                await using (var scope2 = AmbientConnectionScopeTake2.Create(cnString))
-                {
-                    //var cmd2 = scope2.Connection.CreateCommand();
-                    //cmd2.Transaction = scope1.Transaction;
-                    var cmd2 = await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");
-                    await cmd2.ExecuteNonQueryAsync();
-                    scope2.Complete();
-                }
-
-                scope1.Complete();
+                var r = new Repository1(new DbConnectionFactory(cnString));
+                await r.DoMultipleWorkInTransaction(insert, insert2);
+                //scope.Complete();
             }
             using var cn = new SqlConnection(cnString);
             await cn.OpenAsync();
-            var cmdcheck = cn.CreateCommand();
-            cmdcheck.CommandText = $"select id from table_1 where id = '{insert}'";
-            var value = await cmdcheck.ExecuteScalarAsync();
+            var cmd2 = cn.CreateCommand();
+            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
+            var value = await cmd2.ExecuteScalarAsync();
+            Assert.True(value ==null);
+            cmd2.CommandText = $"select id from table_1 where id = '{insert2}'";
+            value = await cmd2.ExecuteScalarAsync();
+            Assert.True(value == null);
+
+        }
+
+
+        [Fact]
+        public async Task TestNoAmbientConnectionScopeDoMultipleWorkInTransactionCommit()
+        {
+            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
+            var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+            var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+           
+            var r = new Repository1(new DbConnectionFactory(cnString));
+            await r.DoMultipleWorkInTransaction(insert, insert2);
+
+            using var cn = new SqlConnection(cnString);
+            await cn.OpenAsync();
+            var cmd2 = cn.CreateCommand();
+            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
+            var value = await cmd2.ExecuteScalarAsync();
             Assert.True(value as string == insert);
-            cmdcheck.CommandText = $"select id from table_2 where id = '{insert2}'";
-            value = await cmdcheck.ExecuteScalarAsync();
+
+            cmd2.CommandText = $"select id from table_1 where id = '{insert2}'";
+            value = await cmd2.ExecuteScalarAsync();
             Assert.True(value as string == insert2);
 
         }
 
+
         [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2TwoCommandsTwoScopeInner2ForgetCallToComplete()
+        public async Task TestAmbientConnectionScopeDoSingleWorkInTransactionCommit()
         {
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            try
+            await using (var scope = AmbientConnectionScope.Create(cnString))
             {
-                await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
-                {
-                    Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
-                    Assert.NotNull(scope.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
-                    //var cmd = scope.Connection.CreateCommand();
-                    //cmd.Transaction = scope.Transaction;
-                    //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd = await scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
-                    await cmd.ExecuteNonQueryAsync();
-                    // NESTED
-                    await using (var scope2 = AmbientConnectionScopeTake2.Create(cnString))
-                    {
-                        //var cmd2 = scope2.Connection.CreateCommand();
-                        //cmd2.Transaction = scope.Transaction;
-                        //cmd2.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                        var cmd2 = await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");
-                        await cmd2.ExecuteNonQueryAsync();
-                        // NESTED 2 // do not call complete
-                    }
-                    scope.Complete();
-                }
-                throw new Exception("Expected exception not thrown");   
+                var r = new Repository1(new DbConnectionFactory(cnString));
+                await r.DoSingleWork(insert);
+                scope.Complete();
             }
-            catch (Exception ex)
-            {
-                Assert.True(ex.Message == "A Child scope did not called complete, but parent scope voted to commit.");
-                using var cn = new SqlConnection(cnString);
-                await cn.OpenAsync();
-                var cmdCheck = cn.CreateCommand();
-                cmdCheck.CommandText = $"select id from table_1 where id = '{insert}'";
-                var value = await cmdCheck.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-                cmdCheck = cn.CreateCommand();
-                cmdCheck.CommandText = $"select id from table_2 where id = '{insert2}'";
-                value = await cmdCheck.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-            }
+            using var cn = new SqlConnection(cnString);
+            await cn.OpenAsync();
+            var cmd2 = cn.CreateCommand();
+            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
+            var value = await cmd2.ExecuteScalarAsync();
+            Assert.True(value as string == insert);
 
         }
 
         [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2TwoCommands3ScopeInner3ForgetCallToComplete()
+        public async Task TestAmbientConnectionScopeTwoLevelScopeDoSingleWorkInTransactionCommit()
         {
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert3 = DateTime.Now.AddSeconds(20).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            try
+            await using (var scope = AmbientConnectionScope.Create(cnString))
             {
-                await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
+                await using (var scope1 = AmbientConnectionScope.Create(cnString))
                 {
-                    Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
-                    Assert.NotNull(scope.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open   , (await scope.GetOpenConnectionOrCreate()).State);
-                    //var cmd = scope.Connection.CreateCommand();
-                    //cmd.Transaction = scope.Transaction;
-                    //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd = await scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
-                    await cmd.ExecuteNonQueryAsync();
-
-                   
-
-                    // NESTED
-                    await using (var scope2 = AmbientConnectionScopeTake2.Create(cnString))
-                    {
-                        //var cmd2 = scope2.Connection.CreateCommand();
-                        //cmd2.Transaction = scope.Transaction;
-                        //cmd2.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                        var cmd2 = await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");  
-                        try
-                        {
-                            await cmd2.ExecuteNonQueryAsync();
-                            // NESTED 3 // do not call complete
-                            await using (var scope3 = AmbientConnectionScopeTake2.Create(cnString))
-                            {
-                                //var cmd3 = scope3.Connection.CreateCommand();
-                                //cmd3.Transaction = scope.Transaction;
-                                //cmd3.CommandText = $"insert into table_2 (id) values ('{insert3}')";
-                                var cmd3 = await scope3.CreateCommandAsync($"insert into table_2 (id) values ('{insert3}')");  
-                                await cmd3.ExecuteNonQueryAsync();
-                                //scope.Complete(); forget to vote 
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            throw;
-                        }
-                        scope2.Complete();
-                    }
-
-                    scope.Complete();
-                }
-                throw new Exception("Expected exception not thrown");
-            }
-            catch (Exception ex)
-            {
-                Assert.True(ex.Message == "A Child scope did not called complete, but parent scope voted to commit.");
-                using var cn = new SqlConnection(cnString);
-                await cn.OpenAsync();
-                var cmd2 = cn.CreateCommand();
-                cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
-                var value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-                cmd2.CommandText = $"select id from table_2 where id = '{insert2}'";
-                value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-                cmd2.CommandText = $"select id from table_2 where id = '{insert3}'";
-                value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-
-            }
-
-        }
-
-        [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2TwoCommands3ScopeInner3Fails()
-        {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
-            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
-            var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            try
-            {
-                await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
-                {
-                    Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
-                    Assert.NotNull(scope.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
-                    //var cmd = scope.Connection.CreateCommand();
-                    //cmd.Transaction = scope.Transaction;
-                    //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd =  await  scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
-                    await cmd.ExecuteNonQueryAsync();
-
-
-
-                    // NESTED
-                    await using (var scope2 = AmbientConnectionScopeTake2.Create(cnString))
-                    {
-                        //var cmd2 = scope2.Connection.CreateCommand();
-                        //cmd2.Transaction = scope.Transaction;
-                        //cmd2.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                        var cmd2= await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");   
-                        try
-                        {
-                            await cmd2.ExecuteNonQueryAsync();
-                            // NESTED 3 // do not call complete
-                            await using (var scope3 = AmbientConnectionScopeTake2.Create(cnString))
-                            {
-                                //var cmd3 = scope3.Connection.CreateCommand();
-                                //cmd3.Transaction = scope.Transaction;
-                                //// generate violation of PK 
-                                //cmd3.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                                var cmd3 = await scope3.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");  
-                                await cmd3.ExecuteNonQueryAsync();
-
-
-                            }
-                            scope.Complete();
-
-                        }
-                        catch (Exception ex)
-                        {
-                            throw;
-                        }
-                        scope2.Complete();
-                    }
-
-                    scope.Complete();
-                }
-                throw new Exception("Expected exception not thrown");
-            }
-            catch (SqlException ex)
-            {
-                Assert.Contains("Violation of PRIMARY KEY constraint 'PK_Table_2'.", ex.Message);
-                using var cn = new SqlConnection(cnString);
-                await cn.OpenAsync();
-                var cmd2 = cn.CreateCommand();
-                cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
-                var value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-                cmd2.CommandText = $"select id from table_2 where id = '{insert2}'";
-                value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-            }
-
-        }
-
-
-        [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2TwoCommands3ScopeInner2Fails()
-        {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
-            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
-            var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            try
-            {
-                await using (var scope = AmbientConnectionScopeTake2.Create(cnString))
-                {
-                    Assert.NotNull((await scope.GetOpenConnectionOrCreate()));
-                    Assert.NotNull(scope.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open, (await scope.GetOpenConnectionOrCreate()).State);
-                    //var cmd = scope.Connection.CreateCommand();
-                    //cmd.Transaction = scope.Transaction;
-                    //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd =await  scope.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')"); 
-                    try
-                    {
-                        await cmd.ExecuteNonQueryAsync();
-
-                    }
-                    catch (Exception ex)
-                    {
-                        throw;
-                    }
-
-                    // NESTED
-                    await using (var scope2 = AmbientConnectionScopeTake2.Create(cnString))
-                    {   // generate violation of PK 
-                        //var cmd2 = scope2.Connection.CreateCommand();
-                        //cmd2.Transaction = scope.Transaction;
-                        //cmd2.CommandText = $"insert into table_2 (id) values ('{insert}')";
-                        var cmd2 =await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert}')");   
-                        await cmd2.ExecuteNonQueryAsync();
-                            // generate violation of PK 
-                            await cmd2.ExecuteNonQueryAsync();
-                            // NESTED 3 // do not call complete
-                            await using (var scope3 = AmbientConnectionScopeTake2.Create(cnString))
-                            {
-                                //var cmd3 = scope3.Connection.CreateCommand();
-                                //cmd3.Transaction = scope.Transaction;
-                                //// generate violation of PK 
-                                //cmd3.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                            var cmd3 = await scope3.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");
-                            try
-                                {
-                                    await cmd3.ExecuteNonQueryAsync();
-
-                                }
-                                catch (Exception ex)
-                                {
-                                    throw;
-                                }
-                                scope3.Complete();
-                        }
-                        scope2.Complete();
-                    }
-
-                    scope.Complete();
-                }
-                throw new Exception("Expected exception not thrown");
-            }
-            catch (SqlException ex)
-            {
-                Assert.Contains("Violation of PRIMARY KEY constraint 'PK_Table_2'.", ex.Message);
-                using var cn = new SqlConnection(cnString);
-                await cn.OpenAsync();
-                var cmd2 = cn.CreateCommand();
-                cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
-                var value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-                cmd2.CommandText = $"select id from table_2 where id = '{insert2}'";
-                value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-            }
-
-        }
-
-        [Fact]
-        public async Task TestAsyncAmbientConnectionScopeTake2TwoCommands3ScopeRootFails()
-        {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
-            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
-            var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert2 = DateTime.Now.AddSeconds(10).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            var insert4 = DateTime.Now.AddSeconds(20).ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            try
-            {
-                await using (var scope1 = AmbientConnectionScopeTake2.Create(cnString))
-                {
-                    Assert.NotNull((await scope1.GetOpenConnectionOrCreate()));
-                    Assert.NotNull(scope1.Transaction);
-                    Assert.Equal(System.Data.ConnectionState.Open, (await scope1.GetOpenConnectionOrCreate()).State);
-                    //var cmd = scope1.Connection.CreateCommand();
-                    //cmd.Transaction = scope1.Transaction;
-                    //cmd.CommandText = $"insert into table_1 (id) values ('{insert}')";
-                    var cmd =   await scope1.CreateCommandAsync($"insert into table_1 (id) values ('{insert}')");    
-                    try
-                    {
-                        await cmd.ExecuteNonQueryAsync();
-
-                    }
-                    catch (Exception ex)
-                    {
-                        throw;
-                    }
-
-                    // NESTED
-                    await using (var scope2 = AmbientConnectionScopeTake2.Create(cnString))
-                    {   // generate violation of PK 
-                        //var cmd2 = scope1.Connection.CreateCommand();
-                        //cmd2.CommandText = $"insert into table_2 (id) values ('{insert}')";
-                        //cmd2.Transaction = scope1.Transaction;
-                        var cmd2 =await scope2.CreateCommandAsync($"insert into table_2 (id) values ('{insert}')");   
-                        await cmd2.ExecuteNonQueryAsync();
-                        // NESTED 3 // do not call complete
-                        await using (var scope3 = AmbientConnectionScopeTake2.Create(cnString))
-                        {
-                            //var cmd3 = scope1.Connection.CreateCommand();
-                            //cmd3.Transaction = scope1.Transaction;
-                            //// generate violation of PK 
-                            //cmd3.CommandText = $"insert into table_2 (id) values ('{insert2}')";
-                            var cmd3 =await scope3.CreateCommandAsync($"insert into table_2 (id) values ('{insert2}')");  
-                            await cmd3.ExecuteNonQueryAsync();
-                            scope3.Complete();
-                        }
-                        scope2.Complete();
-                    }
-                    // violation PK 
-                    await cmd.ExecuteNonQueryAsync();
+                    var r = new Repository1(new DbConnectionFactory(cnString));
+                    await r.DoSingleWork(insert);
                     scope1.Complete();
                 }
-                throw new Exception("Expected exception not thrown");
+                scope.Complete();
             }
-            catch (SqlException ex)
-            {
-                Assert.Contains("Violation of PRIMARY KEY constraint 'PK_Table_1'.", ex.Message);
-                using var cn = new SqlConnection(cnString);
-                await cn.OpenAsync();
-                var cmd2 = cn.CreateCommand();
-                cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
-                var value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-                cmd2.CommandText = $"select id from table_2 where id = '{insert2}'";
-                value = await cmd2.ExecuteScalarAsync();
-                Assert.True(value as string == null);
-            }
+            using var cn = new SqlConnection(cnString);
+            await cn.OpenAsync();
+            var cmd2 = cn.CreateCommand();
+            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
+            var value = await cmd2.ExecuteScalarAsync();
+            Assert.True(value as string == insert);
 
         }
+
+        [Fact]
+        public async Task TestAsyncNoAmbientConnectionScopeDoSingleWork()
+        {
+            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
+            var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+          
+                    var r = new Repository1(new DbConnectionFactory(cnString));
+                    await r.DoSingleWork(insert);
+                   
+          
+            using var cn = new SqlConnection(cnString);
+            await cn.OpenAsync();
+            var cmd2 = cn.CreateCommand();
+            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
+            var value = await cmd2.ExecuteScalarAsync();
+            Assert.True(value as string == insert);
+
+        }
+
+        [Fact]
+        public async Task TestAmbientConnectionScopeDoSingleWorkRollBack()
+        {
+            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
+            var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+            await using (var scope = AmbientConnectionScope.Create(cnString))
+            {
+                var r = new Repository1(new DbConnectionFactory(cnString));
+                await r.DoSingleWork(insert);
+                //scope.Complete()
+            }
+            using var cn = new SqlConnection(cnString);
+            await cn.OpenAsync();
+            var cmd2 = cn.CreateCommand();
+            cmd2.CommandText = $"select id from table_1 where id = '{insert}'";
+            var value = await cmd2.ExecuteScalarAsync();
+            Assert.True(value ==null);
+
+
+        }
+
+       
+   
 
     }
 }
