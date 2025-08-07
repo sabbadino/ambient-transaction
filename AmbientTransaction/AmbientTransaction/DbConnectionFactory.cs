@@ -5,7 +5,7 @@ namespace AmbientTransaction
 {
     public interface IDbConnectionFactory
     {
-        DbConnection GetOpenConnection(out DbTransaction? dbTransaction);
+        DbConnection GetConnection(out DbTransaction? dbTransaction);
         string ConnectionString { get; }
 
     }
@@ -17,7 +17,7 @@ namespace AmbientTransaction
             ConnectionString = connectionString;
         }
 
-        public DbConnection GetOpenConnection (out DbTransaction? dbTransaction) {
+        public DbConnection GetConnection (out DbTransaction? dbTransaction) {
 
             // unfortunately we cannot avoid to pass the actual dbtransaction here , since it has to be associated with the command
             dbTransaction = AmbientTransactionScope.Current?._actualTransaction;
@@ -28,7 +28,6 @@ namespace AmbientTransaction
             else
             {
                 var cn = new SqlConnection(ConnectionString) ;
-                cn.Open();
                 return cn;
             }
             } 

@@ -18,6 +18,7 @@ namespace AmbientTransactionTests
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+            await Task.Delay(100); // Ensure different timestamps for inserts  
             var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await using (var scope = AmbientTransactionScope.Create(cnString))
             {
@@ -43,6 +44,7 @@ namespace AmbientTransactionTests
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+            await Task.Delay(100); // Ensure different timestamps for inserts  
             var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await using (var scope = AmbientTransactionScope.Create(cnString))
             {
@@ -69,6 +71,7 @@ namespace AmbientTransactionTests
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+            await Task.Delay(100); // Ensure different timestamps for inserts  
             var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
            
             var r = new Repository1(new DbConnectionFactory(cnString));

@@ -14,8 +14,9 @@ namespace AmbientTransactionTests
 
         public async Task DoSingleWork(string id)
         {
-            await using (var cn = _dbConnectionFactory.GetOpenConnection(out var dbTransaction))
+            await using (var cn = _dbConnectionFactory.GetConnection(out var dbTransaction))
             {
+                await cn.OpenAsync();
                 var cmd = cn.CreateCommand();
                 cmd.Transaction = dbTransaction;
                 cmd.CommandText = ($"insert into table_1 (id) values ('{id}')");
@@ -29,8 +30,9 @@ namespace AmbientTransactionTests
             await using (var scope = AmbientTransactionScope.Create(_dbConnectionFactory.ConnectionString))
             {
 
-                await using (var cn = _dbConnectionFactory.GetOpenConnection(out var dbTransaction))
+                await using (var cn = _dbConnectionFactory.GetConnection(out var dbTransaction))
                 {
+                    await cn.OpenAsync();
                     var cmd = cn.CreateCommand();
                     cmd.Transaction = dbTransaction;
                     cmd.CommandText = ($"insert into table_1 (id) values ('{id}')");
