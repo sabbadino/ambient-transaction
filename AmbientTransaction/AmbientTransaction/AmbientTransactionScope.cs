@@ -5,7 +5,7 @@
     using System;
     using System.Data.Common;
     using System.Threading.Tasks;
-    public sealed class AmbientConnectionScope : AsyncAmbientScope<AmbientConnectionScope>
+    public sealed class AmbientTransactionScope : AsyncAmbientScope<AmbientTransactionScope>
     {
         private readonly string _connString;
         private readonly bool _ownsContext;
@@ -16,7 +16,7 @@
 
         internal DbTransaction? _actualTransaction;
         internal DbConnectionWrapper _connectionWrapper;
-        private List<AmbientConnectionScope> ChildScopes = new List<AmbientConnectionScope>();
+        private List<AmbientTransactionScope> ChildScopes = new List<AmbientTransactionScope>();
 
         private void Setup()
         {
@@ -27,7 +27,7 @@
 
         } 
        
-        private AmbientConnectionScope(AmbientScopeOption option, string connString, bool ownsContext)
+        private AmbientTransactionScope(AmbientScopeOption option, string connString, bool ownsContext)
             : base(option)
         {
             ArgumentNullException.ThrowIfNull(connString);
@@ -36,7 +36,7 @@
             _vote = false;
         }
 
-        public static AmbientConnectionScope Create(string connString)
+        public static AmbientTransactionScope Create(string connString)
         {
             ArgumentNullException.ThrowIfNull(connString);
             var existing = GetAmbientScope(false);
@@ -47,7 +47,7 @@
             }
             var option = AmbientScopeOption.JoinExisting;
 
-            var scope = new AmbientConnectionScope(option, connString, existing==null);
+            var scope = new AmbientTransactionScope(option, connString, existing==null);
             // keep track of child scopes
             if (existing != null)
             {
@@ -66,17 +66,17 @@
         }
 
         // TO BE TESTED
-        public static AmbientConnectionScope ForceCreateNew(string connString)
+        public static AmbientTransactionScope ForceCreateNew(string connString)
         {
             var option = AmbientScopeOption.ForceCreateNew;
 
             var ownsContext = true;
-            var scope = new AmbientConnectionScope(option, connString, ownsContext);
+            var scope = new AmbientTransactionScope(option, connString, ownsContext);
             scope.Activate();
             return scope;
         }
 
-        public static AmbientConnectionScope? Current =>
+        public static AmbientTransactionScope? Current =>
             GetAmbientScope(false) ;
 
         public void Complete()
@@ -90,7 +90,7 @@
             x.AsTask().Wait();
         }
 
-        private void CheckChildScopes(AmbientConnectionScope scope)
+        private void CheckChildScopes(AmbientTransactionScope scope)
         {
             foreach (var childScope in scope.ChildScopes)
             {

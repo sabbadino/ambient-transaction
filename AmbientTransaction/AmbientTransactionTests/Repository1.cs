@@ -26,7 +26,7 @@ namespace AmbientTransactionTests
 
         public async Task DoMultipleWorkInTransaction(string id, string id2)
         {
-            await using (var scope = AmbientConnectionScope.Create(_dbConnectionFactory.ConnectionString))
+            await using (var scope = AmbientTransactionScope.Create(_dbConnectionFactory.ConnectionString))
             {
 
                 await using (var cn = _dbConnectionFactory.GetOpenConnection(out var dbTransaction))

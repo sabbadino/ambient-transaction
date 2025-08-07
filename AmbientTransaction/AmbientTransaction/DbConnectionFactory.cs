@@ -20,10 +20,10 @@ namespace AmbientTransaction
         public DbConnection GetOpenConnection (out DbTransaction? dbTransaction) {
 
             // unfortunately we cannot avoid to pass the actual dbtransaction here , since it has to be associated with the command
-            dbTransaction = AmbientConnectionScope.Current?._actualTransaction;
-            if(AmbientConnectionScope.Current!=null)
+            dbTransaction = AmbientTransactionScope.Current?._actualTransaction;
+            if(AmbientTransactionScope.Current!=null)
             {
-                return AmbientConnectionScope.Current._connectionWrapper;
+                return AmbientTransactionScope.Current._connectionWrapper;
             }
             else
             {

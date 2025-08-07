@@ -19,7 +19,7 @@ namespace AmbientTransactionTests
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope = AmbientConnectionScope.Create(cnString))
+            await using (var scope = AmbientTransactionScope.Create(cnString))
             {
                 var r = new Repository1(new DbConnectionFactory(cnString));
                 await r.DoMultipleWorkInTransaction(insert,insert2);
@@ -44,7 +44,7 @@ namespace AmbientTransactionTests
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope = AmbientConnectionScope.Create(cnString))
+            await using (var scope = AmbientTransactionScope.Create(cnString))
             {
                 var r = new Repository1(new DbConnectionFactory(cnString));
                 await r.DoMultipleWorkInTransaction(insert, insert2);
@@ -94,7 +94,7 @@ namespace AmbientTransactionTests
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope = AmbientConnectionScope.Create(cnString))
+            await using (var scope = AmbientTransactionScope.Create(cnString))
             {
                 var r = new Repository1(new DbConnectionFactory(cnString));
                 await r.DoSingleWork(insert);
@@ -115,9 +115,9 @@ namespace AmbientTransactionTests
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope = AmbientConnectionScope.Create(cnString))
+            await using (var scope = AmbientTransactionScope.Create(cnString))
             {
-                await using (var scope1 = AmbientConnectionScope.Create(cnString))
+                await using (var scope1 = AmbientTransactionScope.Create(cnString))
                 {
                     var r = new Repository1(new DbConnectionFactory(cnString));
                     await r.DoSingleWork(insert);
@@ -160,7 +160,7 @@ namespace AmbientTransactionTests
             var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope = AmbientConnectionScope.Create(cnString))
+            await using (var scope = AmbientTransactionScope.Create(cnString))
             {
                 var r = new Repository1(new DbConnectionFactory(cnString));
                 await r.DoSingleWork(insert);
