@@ -21,8 +21,7 @@
 
         public override string ConnectionString
         {
-            get => _innerConnection.ConnectionString;
-            set { throw new NotSupportedException(); }
+            get => _innerConnection.ConnectionString; set => throw new NotSupportedException();
         }
 
         public override bool CanCreateBatch => _innerConnection.CanCreateBatch;
