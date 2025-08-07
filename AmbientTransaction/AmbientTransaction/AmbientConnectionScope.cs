@@ -26,21 +26,7 @@
                 _actualTransaction = _actualConnection.BeginTransaction();
 
         } 
-        
-
-        public DbCommand CreateCommand (string text){ 
-            var cmd = _connectionWrapper.CreateCommand();
-            cmd.Transaction = _actualTransaction;
-            cmd.CommandText = text;
-            return cmd;
-        }
-
-        
-
-       // public DbTransaction? Transaction { get { return _TransactionWrapper; } }
-
-     //   public DbConnection? Connection { get { return _connectionWrapper; } }
-
+       
         private AmbientConnectionScope(AmbientScopeOption option, string connString, bool ownsContext)
             : base(option)
         {
