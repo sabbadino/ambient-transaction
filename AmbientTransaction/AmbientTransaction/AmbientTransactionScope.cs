@@ -1,30 +1,25 @@
 ﻿namespace AmbientTransaction
 {
     using Architect.AmbientContexts;
-    using Microsoft.Data.SqlClient;
     using System;
-    using System.Data.Common;
     using System.Threading.Tasks;
+
     public sealed class AmbientTransactionScope : AsyncAmbientScope<AmbientTransactionScope>
     {
         private readonly string _connString;
         private readonly bool _ownsContext;
         private bool _vote;
 
-        internal DbConnection? _actualConnection
-            = null;
+        private ConnectionInformation _ConnectionInformation;
 
-        internal DbTransaction? _actualTransaction;
-        internal DbConnectionWrapper _connectionWrapper;
+
         private List<AmbientTransactionScope> ChildScopes = new List<AmbientTransactionScope>();
+
+        internal ConnectionInformation ConnectionInformation { get => _ConnectionInformation; }
 
         private void Setup()
         {
-                _actualConnection = new SqlConnection(_connString);
-                _connectionWrapper = new DbConnectionWrapper(_actualConnection);
-                _actualConnection.Open();
-                _actualTransaction = _actualConnection.BeginTransaction();
-
+            _ConnectionInformation = new ConnectionInformation(_connString);    
         } 
        
         private AmbientTransactionScope(AmbientScopeOption option, string connString, bool ownsContext)
@@ -52,9 +47,7 @@
             if (existing != null)
             {
                 existing.ChildScopes.Add(scope);
-                scope._actualConnection = existing._actualConnection;
-                scope._connectionWrapper= existing._connectionWrapper;
-                scope._actualTransaction= existing._actualTransaction;
+                scope._ConnectionInformation = existing._ConnectionInformation;
             }
             else {
                 scope.Setup();
@@ -108,7 +101,11 @@
 
         protected override async ValueTask DisposeAsyncImplementation()
         {
-            if (_ownsContext && _actualConnection != null && _actualTransaction != null)
+            if(_ConnectionInformation==null)
+            {
+                throw new ObjectDisposedException("ConnectionInformation has been disposed");
+            }
+            if (_ConnectionInformation.IsInitialized && _ownsContext && _ConnectionInformation.Connection!= null && _ConnectionInformation.Transaction != null)
             {
                 try
                 {
@@ -116,20 +113,19 @@
                 }
                 catch (Exception ex)
                 {
-                    await _actualTransaction.RollbackAsync();
-                    await _actualConnection.DisposeAsync();
+                    await _ConnectionInformation.Transaction.RollbackAsync();
+                    await _ConnectionInformation.Connection.DisposeAsync();
                     throw;
                 }   
                 if (_vote)
-                    await _actualTransaction.CommitAsync();
+                    await _ConnectionInformation.Transaction.CommitAsync();
                 else
-                    await _actualTransaction.RollbackAsync();
+                    await _ConnectionInformation.Transaction.RollbackAsync();
 
-                await _actualTransaction.DisposeAsync();
-                await _actualConnection.DisposeAsync();
+                await _ConnectionInformation.Transaction.DisposeAsync();
+                await _ConnectionInformation.Connection.DisposeAsync();
 
-                _actualConnection = null;
-                _actualTransaction = null;
+                _ConnectionInformation.Dispose();
             }
         }
     }

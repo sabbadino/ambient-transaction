@@ -46,9 +46,11 @@ namespace AmbientTransactionTests
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await Task.Delay(100); // Ensure different timestamps for inserts  
             var insert2 = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
-            await using (var scope = AmbientTransactionScope.Create(cnString))
+
+            var dbConnectionFactory = new DbConnectionFactory(cnString);
+            await using (var scope = AmbientTransactionScope.Create(dbConnectionFactory.ConnectionString))
             {
-                var r = new Repository1(new DbConnectionFactory(cnString));
+                var r = new Repository1(dbConnectionFactory);
                 await r.DoMultipleWorkInTransaction(insert, insert2);
                 //scope.Complete();
             }
@@ -62,6 +64,25 @@ namespace AmbientTransactionTests
             value = await cmd2.ExecuteScalarAsync();
             Assert.True(value == null);
 
+        }
+
+
+        [Fact]
+        public async Task TestCnStringMismatchRaiseException()
+        {
+            var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
+            {
+                var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+                //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
+                var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
+                await using (var scope = AmbientTransactionScope.Create(cnString + "diff"))
+                {
+                    var r = new Repository1(new DbConnectionFactory(cnString));
+                    await r.DoSingleWork(insert);
+                    scope.Complete();
+                }
+            });
+            Assert.Contains("The connection string of DbConnectionFactory does not match the one of the existing ambient scope.", ex.Message, StringComparison.OrdinalIgnoreCase);
         }
 
 
