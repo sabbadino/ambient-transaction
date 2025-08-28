@@ -10,12 +10,18 @@ namespace AmbientTransactionTests
 
         public class UnitTest1Take2
     {
+        private readonly DatabaseFixture _databaseFixture;
 
+        public UnitTest1Take2(DatabaseFixture databaseFixture)
+        {
+            _databaseFixture = databaseFixture;
+        }
+        
 
         [Fact]
         public async Task TestAmbientConnectionScopeDoMultipleWorkInTransactionCommit()
         {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            var cnString = _databaseFixture.ConnectionString;
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await Task.Delay(100); // Ensure different timestamps for inserts  
@@ -41,7 +47,7 @@ namespace AmbientTransactionTests
         [Fact]
         public async Task TestAmbientConnectionScopeDoMultipleWorkInTransactionRollBack()
         {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            var cnString = _databaseFixture.ConnectionString;
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await Task.Delay(100); // Ensure different timestamps for inserts  
@@ -72,7 +78,7 @@ namespace AmbientTransactionTests
         {
             var ex = await Assert.ThrowsAsync<ArgumentException>(async () =>
             {
-                var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+                var cnString = _databaseFixture.ConnectionString;
                 //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
                 var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
                 await using (var scope = AmbientTransactionScope.Create(cnString + "diff"))
@@ -89,7 +95,7 @@ namespace AmbientTransactionTests
         [Fact]
         public async Task TestNoAmbientConnectionScopeDoMultipleWorkInTransactionCommit()
         {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            var cnString = _databaseFixture.ConnectionString;
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await Task.Delay(100); // Ensure different timestamps for inserts  
@@ -115,7 +121,7 @@ namespace AmbientTransactionTests
         [Fact]
         public async Task TestAmbientConnectionScopeDoSingleWorkInTransactionCommit()
         {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            var cnString = _databaseFixture.ConnectionString;
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await using (var scope = AmbientTransactionScope.Create(cnString))
@@ -136,7 +142,7 @@ namespace AmbientTransactionTests
         [Fact]
         public async Task TestAmbientConnectionScopeTwoLevelScopeDoSingleWorkInTransactionCommit()
         {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            var cnString = _databaseFixture.ConnectionString;
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await using (var scope = AmbientTransactionScope.Create(cnString))
@@ -161,7 +167,7 @@ namespace AmbientTransactionTests
         [Fact]
         public async Task TestAsyncNoAmbientConnectionScopeDoSingleWork()
         {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            var cnString = _databaseFixture.ConnectionString;
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
           
@@ -181,7 +187,7 @@ namespace AmbientTransactionTests
         [Fact]
         public async Task TestAmbientConnectionScopeDoSingleWorkRollBack()
         {
-            var cnString = "Server=THINKPAD-32;Database=transactions;User Id=sa;Password=SQL2025_;TrustServerCertificate=true";
+            var cnString = _databaseFixture.ConnectionString;
             //await using (var scope = await XAmbientConnectionScope.CreateAsync(cnString))
             var insert = DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss--fffff");
             await using (var scope = AmbientTransactionScope.Create(cnString))
