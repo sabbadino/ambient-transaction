@@ -242,6 +242,7 @@ scope.Complete(); // Both operations commit together
 Add the following NuGet packages to your project:
 ```xml
 <PackageReference Include="Architect.AmbientContexts" Version="2.0.1" />
+<PackageReference Include="Castle.Core.AsyncInterceptor" Version="2.1.0" />
 <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.0" />
 ```
 
